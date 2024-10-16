@@ -270,7 +270,7 @@
 
 
 ; --------------------------------------------------------------------------------
-; -----------------------PARA DIVISION POLINOMIOS PARTE III-----------------------
+; -----------------------PARA DIVISION POLINOMIOS PARTE II------------------------
 ; --------------------------------------------------------------------------------
 ; Función /-p para devolver una lista con el cociente y el residuo de la división
 (define /-p
@@ -306,125 +306,112 @@
 ; --------------------------------------------------------------------------------
 ; ------------------------PARA FACTORIZACION DE POLINOMIOS------------------------
 ; --------------------------------------------------------------------------------
+;; Función para resolver ecuaciones cuadráticas
+(define resolver-cuadratica
+  (lambda (a b c)
+    ((lambda (discriminante) 
+       (if (negative? discriminante)
+           #f  ; No hay raíces reales
+           ((lambda (raiz-discriminante)
+              (list (/ (+ (- b) raiz-discriminante) (* 2 a))
+                    (/ (- (- b) raiz-discriminante) (* 2 a))))
+            (sqrt (abs discriminante)))))
+     (- (* b b) (* 4 a c)))))
+
+;; Función para crear un factor lineal de la forma (x - r)
+(define crear-factor-lineal
+  (lambda (raiz)
+    (list (- raiz) 1)))
+
+;; Función principal para factorizar polinomios de grado 2
+(define fact-p-cuadratico
+  (lambda (polinomio)
+    ((lambda (a b c)
+       (if (zero? a)
+           (list polinomio)  ; No es un polinomio cuadrático
+           ((lambda (raices)
+              (if raices
+                  ((lambda (factor1 factor2)
+                     (if (= a 1)
+                         (list factor1 factor2)
+                         (list (list a) factor1 factor2)))
+                   (crear-factor-lineal (car raices))
+                   (crear-factor-lineal (cadr raices)))
+                  (list polinomio))) ; No se puede factorizar con raíces reales
+            (resolver-cuadratica a b c))))
+     (if (and (pair? polinomio) (pair? (cdr polinomio)) (pair? (cddr polinomio))) (caddr polinomio) 0)
+     (if (and (pair? polinomio) (pair? (cdr polinomio))) (cadr polinomio) 0)
+     (if (pair? polinomio) (car polinomio) 0))))
+
+;; Función para encontrar divisores de un número
+(define divisores
+  (lambda (n)
+    (filter (lambda (i) (zero? (remainder n i))) (range 1 (add1 (abs n))))))
+
+;; Función para encontrar una raíz racional del polinomio
+(define encontrar-raiz-racional
+  (lambda (p)
+    (define num (abs (first p)))  ;; Término constante
+    (define den (abs (last p)))   ;; Coeficiente de mayor grado
+    (define posibles-raices
+      (append
+       (for/list ([n (in-list (divisores num))] [d (in-list (divisores den))])
+         (/ n d))
+       (for/list ([n (in-list (divisores num))] [d (in-list (divisores den))])
+         (- (/ n d))))) ;; Considera las raíces positivas y negativas
+    (for/or ([r posibles-raices])
+      (if (zero? (eval-p p r)) r #f)))) ;; Evalúa el polinomio en cada raíz
+
+;; Función para la división sintética del polinomio
+(define division-sintetica
+  (lambda (p r)
+    (define (helper p acc)
+      (if (null? (cdr p))
+          (reverse (cdr acc))  ;; Devolver el cociente sin el residuo
+          (helper (cdr p) (cons (+ (car (cdr p)) (* r (car acc))) acc))))
+    (reverse (helper (reverse p) (list (car (reverse p)))))))
+
+;; Simplifica los polinomios eliminando ceros a la izquierda
+(define limpiar-polinomio
+  (lambda (p)
+    (drop-while zero? p)))
+
+;; Implementación propia de drop-while
+(define drop-while
+  (lambda (pred lst)
+    (cond
+      [(null? lst) '()]
+      [(pred (car lst)) (drop-while pred (cdr lst))]
+      [else lst])))
+
+;; Factorización cúbica actualizada para manejar signos y ceros iniciales
+(define factorizar-cubico
+  (lambda (p)
+    (define p-limpio (limpiar-polinomio (simplificar p)))  ;; Limpiar ceros iniciales
+    (define raiz (encontrar-raiz-racional p-limpio))
+    (if raiz
+        (let ((coef-reducidos (division-sintetica p-limpio raiz)))
+          (let ((factores-cuadraticos (fact-p coef-reducidos)))
+            (cons (crear-factor-lineal raiz) factores-cuadraticos)))
+        (list p-limpio))))  ;; No se puede factorizar
+
+;; Función fact-p actualizada para manejar tanto grado 2 como grado 3
 (define fact-p
-  (lambda (pol)
+  (lambda (polinomio)
     (cond
-      [ (= (length pol) 3) (fact-2g pol)]
-      [else
-       (factorizar pol)])))
+      [(= (grado polinomio) 2) (fact-p-cuadratico polinomio)]  ;; Grado 2
+      [(= (grado polinomio) 3) (factorizar-cubico polinomio)]  ;; Grado 3
+      [else (list polinomio)])))  ;; Si no es grado 2 o 3, devolvemos el polinomio sin factorizar
 
-(define cambiar-signo ;Cambia el signo de cada número, devuelve un número
-  (lambda (numero)
-    (if (>  numero 0)
-        (string->number (string-append "-" (number->string numero)))
-        (string->number (string-append "+" (number->string (- numero)))))
-      ))
-
-(define fact-2g ;Realiza la factorización de polinomios de grado 2
-(lambda (pol)
-  (cond
-    [(= (caddr pol) 0) pol]
-    [(null? pol) pol]
-    [else
-     (cons (list (cambiar-signo (formula-resta pol)) 1) (list (list (cambiar-signo (formula-suma pol)) 1)))])))
-  
-
-(define formula-resta ;Esta función equivale a la fórmula general de la ecuación cuadrática
-  (lambda (pol)
-    (cond
-      [(= (caddr pol) 0) pol]
-      [(null? pol) pol]
-      [else (/ (- (cambiar-signo (cadr pol)) (raiz pol)) (* 2 (caddr pol)))])))
-
-(define formula-suma ;Esta función equivale a la fórmula general de la ecuación cuadrática
-  (lambda (pol)
-    (cond
-      [(= (caddr pol) 0) pol]
-      [(null? pol) pol]
-      [else (/ (+ (cambiar-signo (cadr pol)) (raiz pol)) (* 2 (caddr pol)))])))
-
-(define desarrollo-x ;Ejecuta la multiplicación del monomio, X es el valor e I es la potencia.
-  (lambda (x i)
-    (cond
-      [(= x 1) x]
-      [(= i 0) 1]
-      [else
-       (* x (desarrollo-x x (- i 1)))])))
-
-(define raiz ;Calcula la raíz que se utilizará en la fórmula general
-  (lambda (pol)
-    (cond
-     [(null? pol) pol]
-     [else
-      (sqrt(- (desarrollo-x (cadr pol) 2) (* 4 (* (caddr pol) (car pol)))))])))
-
-(define divisores-positivos ;Consigue los divisores positivos de un número
-  (lambda (num i lista)
-    (cond
-      [(= i 0) lista]
-      [(= (modulo num i) 0) (cons i (divisores-positivos num (- i 1) lista))]
-      [else
-       (divisores-positivos num (- i 1) lista)])))
-
-(define factorizar ;Método que llama al que devuelve la factorización.
-  (lambda (pol)
-    (cond
-      [(= (car pol) 0) (metodo (reverse (cdr pol)) (divisores (hacer-positivo (cadr pol))) (list (list 0 1)))]
-      [else
-        (metodo (reverse pol) (divisores (hacer-positivo (car pol))) '())])))
-
-
-(define metodo ;Devuelve la factorización de un polinomio
-  (lambda (pol divisores resultados)
-    (cond
-      [(null? pol) resultados]
-      [(null? divisores) resultados]
-      [else
-       (cond
-         [(equal? (verificar pol (car divisores) '()) #t) (metodo pol (cdr divisores) (cons (list (cambiar-signo (car divisores)) 1) resultados))]
-         [(equal? (verificar pol (car divisores) '()) #f) (metodo pol (cdr divisores) resultados)])])))
-
-
-
-(define divisores ;Consigue la lista de divisores de un número
-  (lambda (num)
-   (append (map (lambda (x) (* x -1)) (divisores-positivos num num '())) (divisores-positivos num num '()))
-    ))
-
-(define verificar ;Devuelve true si el car del resultado es 0
-  (lambda (pol div res)
-    (cond
-      [(= (car (operacion-principal pol div res)) 0) #t]
-      [else
-       #f])))
-
-(define operacion-principal ;Realiza la operación principal del método de Ruffini
-  (lambda (pol div res)
-    (cond
-      [(null? pol) res]
-      [(null? res) (operacion-principal (cdr pol) div (list (car pol)))]
-      [else
-       (operacion-principal (cdr pol) div (append (list (desarrolla-operacion div (car res) (car pol))) res))])))
-
-
-(define desarrolla-operacion
-  (lambda (divisor res num-pol) ; res = resultado, num-pol = coeficiente del polinomio
-    (+ num-pol (* res divisor))))
-
-
-(define hacer-positivo ;Cambia el signo de un número si este es negativo, devuelve un número
-  (lambda (numero)
-    (if (>  numero 0)
-        numero
-        (string->number (string-append "+" (number->string (- numero)))))
-      ))
 
 ; --------------------------------------------------------------------------------
 ; ---------------------FINAL PARA FACTORIZACION DE POLINOMIOS---------------------
 ; --------------------------------------------------------------------------------
 
 
-;;PRUEBAS
+
+
+
 
 (*p '(-1 1) '(-2 1) '(2 1))
 (fact-p '(-2 -5 18 45))
