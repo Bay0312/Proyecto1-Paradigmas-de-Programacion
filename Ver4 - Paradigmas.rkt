@@ -306,144 +306,133 @@
 ; --------------------------------------------------------------------------------
 ; ------------------------PARA FACTORIZACION DE POLINOMIOS------------------------
 ; --------------------------------------------------------------------------------
+
+; --------------------------------------------------------------------------------
+; ---------------------------FACTORIZACION DE POLINOMIOS--------------------------
+; --------------------------------------------------------------------------------
+; SEGUNDO GRADO
+(define calcular-discriminante
+  (lambda (a b c)
+    (- (* b b) (* 4 a c))))
+
+(define obtener-x
+  (lambda (signo a b discriminante)
+    (/ (signo (* b -1) (sqrt discriminante)) (* 2 a))))
+
+(define factorizar-segundo-grado
+  (lambda (polinomio)
+    (define a (car (cdr (cdr polinomio))))
+    (define b (car (cdr polinomio)))
+    (define c (car polinomio))
+    (define disc (calcular-discriminante a b c))
+
+    (define obtener-raices
+      (lambda (a b disc)
+        (list (list (* -1 (obtener-x + a b disc)) 1)
+              (list (* -1 (obtener-x - a b disc)) 1))))
+
+    (if (>= disc 0)
+        (obtener-raices a b disc)
+        "La ecuación es de segundo grado pero tiene raíces complejas.")))
+
+; FIN SEGUNDO GRADO
+
+; TERCER GRADO EN ADELANTE
+; Se calculan las raíces del polinomio con la regla de Ruffini.
+(define obtener-posibles-raices
+  (lambda (c)
+    (define calcular-raices
+      (lambda (divisor res)
+        (cond
+          [(equal? divisor 1) (append res (list 1))]
+          [(equal? (modulo c divisor) 0) (calcular-raices (sub1 divisor) (append res (list divisor)))]
+          [else (calcular-raices (sub1 divisor) res)])))
+    (calcular-raices (sub1 (abs c)) (list c))))
+
+(define obtener-raices-ruffini
+  (lambda (polinomio)
+    (define posibles-raices (reverse (obtener-posibles-raices (first polinomio))))
+    
+    (define realizar-evaluacion-ruffini
+      (lambda (p denominador cociente divisor signo pol raices raices-restantes)
+        (cond
+          [(null? p)
+           (cond
+             [(equal? signo +)
+              (if (equal? (last cociente) 0)
+                  (realizar-ruffini (reverse (cdr (reverse cociente))) (append raices (list divisor)) raices-restantes -)
+                  (realizar-ruffini pol raices raices-restantes -))]
+             [else
+              (if (equal? (last cociente) 0)
+                  (realizar-ruffini (reverse (cdr (reverse cociente))) (append raices (list (* divisor -1))) (cdr raices-restantes) +)
+                  (realizar-ruffini pol raices (cdr raices-restantes) +))])]
+          [else
+           (realizar-evaluacion-ruffini (cdr p) 
+                                        (append denominador (list (* (last cociente) (if (equal? signo -) (* divisor -1) divisor)))) 
+                                        (append cociente (list (+ (car p) (* (last cociente) (if (equal? signo -) (* divisor -1) divisor)))))
+                                        divisor signo pol raices raices-restantes)])))
+    
+    (define realizar-ruffini
+      (lambda (pol raices raices-restantes signo)
+        (cond
+          [(null? raices-restantes) raices]
+          [else
+           (realizar-evaluacion-ruffini (cdr pol) '() (list (car pol)) (car raices-restantes) signo pol raices raices-restantes)])))
+    
+    (realizar-ruffini (reverse polinomio) '() posibles-raices +)))
+
+; Se expresa cada raíz hallada del tipo x=a en forma de factor (x-a).
+(define factorizar-con-raices
+  (lambda (polinomio obtener-raices)
+    (define realizar-factorizacion
+      (lambda (raices res)
+        (if (null? raices)
+            res
+            (realizar-factorizacion (cdr raices) (append res (list (list (* (car raices) -1) 1)))))))
+    (realizar-factorizacion (obtener-raices polinomio) '())))
+
+; FIN CUALQUIER GRADO CON C
+
+; CUALQUIER GRADO SIN C
+(define obtener-mcd
+  (lambda (polinomio)
+    (if (equal? (length polinomio) 1)
+        (car polinomio)
+        (gcd (car polinomio) (obtener-mcd (cdr polinomio))))))
+
+(define obtener-factor-comun
+  (lambda (polinomio)
+    (define factor-comun
+      (lambda (comun-div p ct)
+        (if (not (equal? (car p) 0))
+            (append (make-list (add1 ct) 0) (list comun-div))
+            (factor-comun comun-div (cdr p) (add1 ct)))))
+    (factor-comun (obtener-mcd polinomio) polinomio 0)))
+
+(define factorizar-sin-termino-independiente
+  (lambda (polinomio)
+    (define factor-comun (obtener-factor-comun (cdr polinomio)))
+    
+    (define realizar-factorizacion
+      (lambda (raices res)
+        (if (null? raices)
+            res
+            (realizar-factorizacion (cdr raices) (append res (list (list (* (car raices) -1) 1)))))))
+    
+    (realizar-factorizacion (obtener-raices-ruffini (cdr polinomio)) (list factor-comun))))
+
 (define fact-p
-  (lambda (pol)
+  (lambda (polinomio)
     (cond
-      [ (= (length pol) 3) (fact-2g pol)]
-      [else
-       (factorizar pol)])))
-
-(define cambiar-signo ;Cambia el signo de cada número, devuelve un número
-  (lambda (numero)
-    (if (>  numero 0)
-        (string->number (string-append "-" (number->string numero)))
-        (string->number (string-append "+" (number->string (- numero)))))
-      ))
-
-(define fact-2g ;Realiza la factorización de polinomios de grado 2
-(lambda (pol)
-  (cond
-    [(= (caddr pol) 0) pol]
-    [(null? pol) pol]
-    [else
-     (cons (list (cambiar-signo (formula-resta pol)) 1) (list (list (cambiar-signo (formula-suma pol)) 1)))])))
-  
-
-(define formula-resta ;Esta función equivale a la fórmula general de la ecuación cuadrática
-  (lambda (pol)
-    (cond
-      [(= (caddr pol) 0) pol]
-      [(null? pol) pol]
-      [else (/ (- (cambiar-signo (cadr pol)) (raiz pol)) (* 2 (caddr pol)))])))
-
-(define formula-suma ;Esta función equivale a la fórmula general de la ecuación cuadrática
-  (lambda (pol)
-    (cond
-      [(= (caddr pol) 0) pol]
-      [(null? pol) pol]
-      [else (/ (+ (cambiar-signo (cadr pol)) (raiz pol)) (* 2 (caddr pol)))])))
-
-(define desarrollo-x ;Ejecuta la multiplicación del monomio, X es el valor e I es la potencia.
-  (lambda (x i)
-    (cond
-      [(= x 1) x]
-      [(= i 0) 1]
-      [else
-       (* x (desarrollo-x x (- i 1)))])))
-
-(define raiz ;Calcula la raíz que se utilizará en la fórmula general
-  (lambda (pol)
-    (cond
-     [(null? pol) pol]
-     [else
-      (sqrt(- (desarrollo-x (cadr pol) 2) (* 4 (* (caddr pol) (car pol)))))])))
-
-(define divisores-positivos ;Consigue los divisores positivos de un número
-  (lambda (num i lista)
-    (cond
-      [(= i 0) lista]
-      [(= (modulo num i) 0) (cons i (divisores-positivos num (- i 1) lista))]
-      [else
-       (divisores-positivos num (- i 1) lista)])))
-
-(define factorizar ;Método que llama al que devuelve la factorización.
-  (lambda (pol)
-    (cond
-      [(= (car pol) 0) (metodo (reverse (cdr pol)) (divisores (hacer-positivo (cadr pol))) (list (list 0 1)))]
-      [else
-        (metodo (reverse pol) (divisores (hacer-positivo (car pol))) '())])))
+      [(and (= (length polinomio) 3) (not (equal? (third polinomio) 0)))
+       (factorizar-segundo-grado polinomio)]
+      [else 
+       (if (equal? (first polinomio) 0)
+           (factorizar-sin-termino-independiente polinomio)
+           (factorizar-con-raices polinomio obtener-raices-ruffini))])))
 
 
-(define metodo ;Devuelve la factorización de un polinomio
-  (lambda (pol divisores resultados)
-    (cond
-      [(null? pol) resultados]
-      [(null? divisores) resultados]
-      [else
-       (cond
-         [(equal? (verificar pol (car divisores) '()) #t) (metodo pol (cdr divisores) (cons (list (cambiar-signo (car divisores)) 1) resultados))]
-         [(equal? (verificar pol (car divisores) '()) #f) (metodo pol (cdr divisores) resultados)])])))
-
-
-
-(define divisores ;Consigue la lista de divisores de un número
-  (lambda (num)
-   (append (map (lambda (x) (* x -1)) (divisores-positivos num num '())) (divisores-positivos num num '()))
-    ))
-
-(define verificar ;Devuelve true si el car del resultado es 0
-  (lambda (pol div res)
-    (cond
-      [(= (car (operacion-principal pol div res)) 0) #t]
-      [else
-       #f])))
-
-(define operacion-principal ;Realiza la operación principal del método de Ruffini
-  (lambda (pol div res)
-    (cond
-      [(null? pol) res]
-      [(null? res) (operacion-principal (cdr pol) div (list (car pol)))]
-      [else
-       (operacion-principal (cdr pol) div (append (list (desarrolla-operacion div (car res) (car pol))) res))])))
-
-
-(define desarrolla-operacion
-  (lambda (divisor res num-pol) ; res = resultado, num-pol = coeficiente del polinomio
-    (+ num-pol (* res divisor))))
-
-
-(define hacer-positivo ;Cambia el signo de un número si este es negativo, devuelve un número
-  (lambda (numero)
-    (if (>  numero 0)
-        numero
-        (string->number (string-append "+" (number->string (- numero)))))
-      ))
 
 ; --------------------------------------------------------------------------------
 ; ---------------------FINAL PARA FACTORIZACION DE POLINOMIOS---------------------
 ; --------------------------------------------------------------------------------
-
-
-;;PRUEBAS
-
-(*p '(-1 1) '(-2 1) '(2 1))
-(fact-p '(-2 -5 18 45))
-(fact-p '(-18 -6 3 1))
-(fact-p '(0 2 0 -2))
-(fact-p '(4 4 1))
-(*p '(-1 1) '(-2 -2))
-(fact-p '(8 4 6 3))
-(fact-p '(-6 11 -6 1))
-(*p '(-1 1) '(-3 1) '(-2 1))
-(fact-p '(4 0 -3 1))
-(*p '(1 1) '(-2 1) '(-2 1))
-(fact-p '(2 6 6 2))
-
-(fact-p '(-6 1 1))  ;'((3 1) (-2 1))
-(fact-p '(-72 -6 7 1)) ;  '((-3 1) (4 1) (6 1))
-(fact-p '(0 2 0 -2))
-(*p '(2) '(-1 1) '(-2 -2))
-(fact-p '(-5 -8 3))
-(fact-p '(-5 4 1))
-(fact-p '(-8 -2 1))
-(fact-p '(20 -14 2))
