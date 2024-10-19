@@ -1,9 +1,26 @@
 #lang racket
 
 
+; ---------------------------------------------------------------------
+;
+; (c) 2024
+; EIF400 Paradigmas de Programación
+; 2do ciclo 2024
+; Proyecto #1
+;
+; 703000234-  Bayron Vega Alvarez
+; 604860473 - Johan Mora Portuguez
+;
+;
+; version 1.0.0 2024-10-19
+;
+; ---------------------------------------------------------------------
+
+
 ; --------------------------------------------------------------------------------
 ; ---------------------------------PARA DISPLAY-P---------------------------------
 ; --------------------------------------------------------------------------------
+; Convierte un término del polinomio a su representación en string
 (define mostrar-termino
   (lambda (coef exp)
     (cond
@@ -20,6 +37,7 @@
          [(= coef -1) (string-append "-x^" (number->string exp))]
          [else (string-append (number->string coef) "x^" (number->string exp))])])))
 
+; Recorre el polinomio y acumula su representación en string
 (define auxiliar
   (lambda (polinomio exp acumulador)
     (cond
@@ -31,17 +49,16 @@
         (cond
           [(string=? (mostrar-termino (car polinomio) exp) "") acumulador]
           [(string=? acumulador "") (mostrar-termino (car polinomio) exp)]
-          [(positive? (car polinomio))
+          [(positive? (car polinomio)) 
            (string-append acumulador " + " (mostrar-termino (car polinomio) exp))]
           [else
            (string-append acumulador " " (mostrar-termino (car polinomio) exp))]))])))
 
+; Funcion principal de display-p. Muestra el polinomio en formato legible
 (define display-p
   (lambda (polinomio)
     (display (auxiliar polinomio 0 ""))
     (newline)))
-
-
 
 
 ; --------------------------------------------------------------------------------
@@ -52,6 +69,7 @@
 ; --------------------------------------------------------------------------------
 ; ------------------------------PARA SUMA POLINOMIOS------------------------------
 ; --------------------------------------------------------------------------------
+; Suma dos polinomios término a término
 (define suma-polinomios
   (lambda (p1 p2)
     (cond
@@ -59,26 +77,27 @@
       [(null? p2) p1]
       [else (cons (+ (car p1) (car p2)) (suma-polinomios (cdr p1) (cdr p2)))])))
 
+; Suma una lista de polinomios
 (define sumar-todos-polinomios
   (lambda (polinomios)
     (cond
       [(null? (cdr polinomios)) (car polinomios)]
       [else (suma-polinomios (car polinomios) (sumar-todos-polinomios (cdr polinomios)))])))
 
+; Elimina los ceros a la derecha del polinomio
 (define simplificar
   (lambda (polinomio)
     (cond
-      [(null? polinomio) '()]  ;; Si el polinomio está vacío, devolver lista vacía
-      [(zero? (last polinomio)) (simplificar (reverse (cdr (reverse polinomio))))]  ;; Si el último término es 0, lo eliminamos
-      [else polinomio])))  ;; Si no hay ceros a la derecha, devolvemos el polinomio intacto
+      [(null? polinomio) '()] ; Si el polinomio está vacío, devolver lista vacía
+      [(zero? (last polinomio)) (simplificar (reverse (cdr (reverse polinomio))))] ;; Si el último término es 0, lo eliminamos
+      [else polinomio]))) ;; Si no hay ceros a la derecha, devolvemos el polinomio intacto
 
-
+; Funcion principal de suma
 (define +p
   (lambda polinomios
     (display-p
      (simplificar
       (sumar-todos-polinomios polinomios)))))
-
 
 ; --------------------------------------------------------------------------------
 ; ---------------------------FINAL PARA SUMA POLINOMIOS---------------------------
@@ -87,20 +106,23 @@
 ; --------------------------------------------------------------------------------
 ; ------------------------------PARA RESTA POLINOMIOS-----------------------------
 ; --------------------------------------------------------------------------------
-(define resta-polinomios
+; Resta dos polinomios término a término
+(define resta-polinomios 
   (lambda (p1 p2)
     (cond
-      [(null? p1) (map (lambda (coef) (- coef)) p2)] ;; Si p1 es nulo, devolver los negativos de p2
-      [(null? p2) p1]                                ;; Si p2 es nulo, devolver p1
+      [(null? p1) (map (lambda (coef) (- coef)) p2)] ; Si p1 es nulo se devuelven los negativos de p2
+      [(null? p2) p1]                                ; Si p2 es nulo se devuelve p1
       [else (cons (- (car p1) (car p2)) (resta-polinomios (cdr p1) (cdr p2)))])))
 
+; Resta una lista de polinomios
 (define restar-todos-polinomios
   (lambda (polinomios)
     (cond
-      [(null? (cdr polinomios)) (car polinomios)]    ;; Si solo queda un polinomio, devolverlo
-      [else (restar-todos-polinomios                 ;; Restar desde la izquierda progresivamente
+      [(null? (cdr polinomios)) (car polinomios)]    ; Si solo queda un polinomio este mismo se devuelve
+      [else (restar-todos-polinomios                 ; Resta desde la izquierda progresivamente
               (cons (resta-polinomios (car polinomios) (cadr polinomios)) (cddr polinomios)))])))
 
+; Funcion principal de resta
 (define -p
   (lambda polinomios
     (display-p
@@ -116,24 +138,24 @@
 ; --------------------------------------------------------------------------------
 ; -------------------------PARA MULTIPLICACION POLINOMIOS-------------------------
 ; --------------------------------------------------------------------------------
-;; Multiplica un término por un polinomio, ajustando los exponentes
+; Multiplica un término por un polinomio ajustando los exponentes
 (define multiplicar-termino-por-polinomio
   (lambda (coef exp polinomio)
     (cond
-      [(null? polinomio) '()]   ;; Si el polinomio está vacío, devolver lista vacía
+      [(null? polinomio) '()]   ; Si el polinomio está vacío se devuelve una lista vacía
       [else (cons (* coef (car polinomio))  ;; Multiplicar coeficiente
                   (multiplicar-termino-por-polinomio coef (add1 exp) (cdr polinomio)))])))
 
-;; Multiplica dos polinomios
+; Multiplica dos polinomios
 (define multiplicar-dos-polinomios
   (lambda (p1 p2)
     (cond
-      [(null? p1) '()]   ;; Si uno de los polinomios está vacío, devolver lista vacía
-      [else (suma-polinomios  ;; Sumar el resultado de multiplicar el primer término de p1 por todo p2
+      [(null? p1) '()]   ; Si uno de los polinomios está vacío se devuelve una lista vacía
+      [else (suma-polinomios  ; Suma el resultado de multiplicar el primer término de p1 por todo p2
              (multiplicar-termino-por-polinomio (car p1) 0 p2)
              (cons 0 (multiplicar-dos-polinomios (cdr p1) p2)))])))
 
-;; Multiplicar todos los polinomios
+; Multiplica una lista de polinomios
 (define multiplicar-todos-polinomios
   (lambda (polinomios)
     (cond
@@ -142,7 +164,7 @@
              (cons (multiplicar-dos-polinomios (car polinomios) (cadr polinomios))
                    (cddr polinomios)))])))
 
-;; Simplificar y mostrar el polinomio resultante
+; Funcion principal de multiplicación
 (define *p
   (lambda polinomios
     (display-p
@@ -172,7 +194,7 @@
       [else (cons (* (car polinomio) exp)
                   (derivar-polinomio-aux (cdr polinomio) (add1 exp)))])))
 
-; Deriva todos los polinomios dados
+; Deriva una lista de polinomios
 (define derivar-todos-polinomios
   (lambda (polinomios)
     (cond
@@ -212,7 +234,7 @@
     (append (make-list grado 0)
             (map (lambda (x) (* x coef)) polinomio))))
 
-; Función recursiva que implementa el cálculo del cociente sin let
+; Función recursiva que implementa el cálculo del cociente
 (define qt-p-recursivo
   (lambda (p1 p2 cociente)
     (if (< (grado p1) (grado p2))
@@ -222,7 +244,7 @@
          p2
          (suma-polinomios cociente (append (make-list (- (grado p1) (grado p2)) 0) (list (/ (coef-lider p1) (coef-lider p2)))))))))
 
-; Función principal para la división de polinomios y su despliegue sin let
+; Función principal para la división de polinomios y su despliegue
 (define qt-p
   (lambda (p1 p2)
     (display-p (simplificar (qt-p-recursivo p1 p2 '(0))))))
@@ -235,9 +257,6 @@
 ; --------------------------------------------------------------------------------
 ; -----------------------PARA DIVISION POLINOMIOS PARTE II------------------------
 ; --------------------------------------------------------------------------------
-
-; Reutilizamos las funciones auxiliares definidas anteriormente
-; (grado, coef-lider, mult-monomio)
 
 ; Función recursiva que implementa el cálculo del residuo
 (define rem-p-recursivo
@@ -258,21 +277,16 @@
   (lambda (p1 p2)
     (display-p (simplificar (rem-p-recursivo p1 p2)))))
 
-; Función para mostrar el resultado
-(define mostrar-rem-p
-  (lambda (p1 p2)
-    (display "Residuo: ")
-    (rem-p p1 p2)))
-
 ; --------------------------------------------------------------------------------
 ; --------------------FINAL PARA DIVISION POLINOMIOS PARTE II---------------------
 ; --------------------------------------------------------------------------------
 
 
 ; --------------------------------------------------------------------------------
-; -----------------------PARA DIVISION POLINOMIOS PARTE III-----------------------
+; -----------------------PARA DIVISION POLINOMIOS PARTE III------------------------
 ; --------------------------------------------------------------------------------
-; Función /-p para devolver una lista con el cociente y el residuo de la división
+; Función /-p para devolver una lista con el cociente y el residuo de la división.
+; El primer elemento de la lista correspone al cociente, el segundo al residuo.
 (define /-p
   (lambda (p1 p2)
     (list (simplificar (qt-p-recursivo p1 p2 '(0)))  ; El cociente
@@ -296,7 +310,7 @@
 ; Función principal eval-p que evalúa el polinomio p en el valor x
 (define eval-p
   (lambda (p x)
-    (horner (reverse p) x 0)))  ;; Invertimos la lista de coeficientes antes de usar Horner
+    (horner (reverse p) x 0)))  ; Invertimos la lista de coeficientes antes de usar Horner
 
 ; --------------------------------------------------------------------------------
 ; ------------------------FINAL PARA EVALUACION CON HORNER------------------------
@@ -306,19 +320,17 @@
 ; --------------------------------------------------------------------------------
 ; ------------------------PARA FACTORIZACION DE POLINOMIOS------------------------
 ; --------------------------------------------------------------------------------
-
-; --------------------------------------------------------------------------------
-; ---------------------------FACTORIZACION DE POLINOMIOS--------------------------
-; --------------------------------------------------------------------------------
-; SEGUNDO GRADO
+; Calcula el discriminante de un polinomio de segundo grado
 (define calcular-discriminante
   (lambda (a b c)
     (- (* b b) (* 4 a c))))
 
-(define obtener-x
+; Calcula la raíz de una ecuación cuadrática usando el signo y el discriminante
+(define calcular-raiz-cuadratica
   (lambda (signo a b discriminante)
     (/ (signo (* b -1) (sqrt discriminante)) (* 2 a))))
 
+; Factoriza un polinomio de segundo grado
 (define factorizar-segundo-grado
   (lambda (polinomio)
     (define a (car (cdr (cdr polinomio))))
@@ -328,27 +340,24 @@
 
     (define obtener-raices
       (lambda (a b disc)
-        (list (list (* -1 (obtener-x + a b disc)) 1)
-              (list (* -1 (obtener-x - a b disc)) 1))))
+        (list (list (* -1 (calcular-raiz-cuadratica + a b disc)) 1)
+              (list (* -1 (calcular-raiz-cuadratica - a b disc)) 1))))
 
     (if (>= disc 0)
         (obtener-raices a b disc)
-        "La ecuación es de segundo grado pero tiene raíces complejas.")))
+        "Este polinomio contiene raices imaginarias...")))
 
-; FIN SEGUNDO GRADO
-
-; TERCER GRADO EN ADELANTE
-; Se calculan las raíces del polinomio con la regla de Ruffini.
 (define obtener-posibles-raices
   (lambda (c)
     (define calcular-raices
       (lambda (divisor res)
         (cond
-          [(equal? divisor 1) (append res (list 1))]
+          [(<= divisor 1) (append res (list 1))] ; Verifica que el divisor sea mayor que 0
           [(equal? (modulo c divisor) 0) (calcular-raices (sub1 divisor) (append res (list divisor)))]
           [else (calcular-raices (sub1 divisor) res)])))
     (calcular-raices (sub1 (abs c)) (list c))))
 
+; Aplica la regla de Ruffini para encontrar raíces racionales
 (define obtener-raices-ruffini
   (lambda (polinomio)
     (define posibles-raices (reverse (obtener-posibles-raices (first polinomio))))
@@ -381,7 +390,7 @@
     
     (realizar-ruffini (reverse polinomio) '() posibles-raices +)))
 
-; Se expresa cada raíz hallada del tipo x=a en forma de factor (x-a).
+; Factoriza un polinomio a partir de sus raíces
 (define factorizar-con-raices
   (lambda (polinomio obtener-raices)
     (define realizar-factorizacion
@@ -391,15 +400,14 @@
             (realizar-factorizacion (cdr raices) (append res (list (list (* (car raices) -1) 1)))))))
     (realizar-factorizacion (obtener-raices polinomio) '())))
 
-; FIN CUALQUIER GRADO CON C
-
-; CUALQUIER GRADO SIN C
+; Obtiene el máximo común divisor de los coeficientes de un polinomio
 (define obtener-mcd
   (lambda (polinomio)
     (if (equal? (length polinomio) 1)
         (car polinomio)
         (gcd (car polinomio) (obtener-mcd (cdr polinomio))))))
 
+; Encuentra el factor común de un polinomio
 (define obtener-factor-comun
   (lambda (polinomio)
     (define factor-comun
@@ -409,6 +417,7 @@
             (factor-comun comun-div (cdr p) (add1 ct)))))
     (factor-comun (obtener-mcd polinomio) polinomio 0)))
 
+; Factoriza un polinomio cuando no tiene término independiente
 (define factorizar-sin-termino-independiente
   (lambda (polinomio)
     (define factor-comun (obtener-factor-comun (cdr polinomio)))
@@ -421,16 +430,17 @@
     
     (realizar-factorizacion (obtener-raices-ruffini (cdr polinomio)) (list factor-comun))))
 
+; Función principal que decide el método de factorización según el polinomio
 (define fact-p
   (lambda (polinomio)
     (cond
+      [(<= (length polinomio) 2) polinomio] ; No hace nada si la lista tiene 0, 1 o 2 elementos
       [(and (= (length polinomio) 3) (not (equal? (third polinomio) 0)))
-       (factorizar-segundo-grado polinomio)]
+       (factorizar-segundo-grado polinomio)] ; Factorización de segundo grado
       [else 
        (if (equal? (first polinomio) 0)
-           (factorizar-sin-termino-independiente polinomio)
-           (factorizar-con-raices polinomio obtener-raices-ruffini))])))
-
+           (factorizar-sin-termino-independiente polinomio) ; Factorización sin término independiente
+           (factorizar-con-raices polinomio obtener-raices-ruffini))]))) ; Factorización con Ruffini
 
 
 ; --------------------------------------------------------------------------------
