@@ -273,6 +273,7 @@
          p2))))
 
 ; Función principal para el cálculo del residuo
+; SI LA DIVISION NO ES POSIBLE, ENTONCES EL RESIDUO SERÁ EL MISMO DIVIDENDO
 (define rem-p
   (lambda (p1 p2)
     (display-p (simplificar (rem-p-recursivo p1 p2)))))
@@ -514,6 +515,10 @@
 (newline)
 ; (fact-p p1)
 (display "(fact-p p1)") (newline) (newline)
-(fact-p '(1 -1))
-(fact-p '(1 0 -1))
-(fact-p '(1 -6 11 -6))
+(fact-p '(1 -1)) ; Grado 1
+(fact-p '(25 -10 1)) ; Grado 2
+(fact-p '(-8 14 -7 1)) ; Grado 3
+(fact-p '(24 -50 35 -10 1)) ; Grado 4
+(fact-p '(-120 274 -225 85 -15 1)) ; Grado 5
+(fact-p  '(720 -1764 1624 -735 175 -21 1)) ;Grado 6 
+(fact-p '(3628800 -10628640 12753576 -8409500 3416930 -902055 157773 -18150 1320 -55 1)) ; Grado 10
