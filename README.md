@@ -28,6 +28,7 @@ Este proyecto implementa funciones en **Racket** para la suma, resta, multiplica
 
 ## Nota
 En el proyecto los polinomios se interpretan a partir de las listas inversamente. Es decir, el primer numero de la lista es la constante, y conforme avanzamos encontramos los coeficientes que acompañan a las x de mayor grado. Por ejemplo, la lista '(1 2 3 4) representa: 1 + 2x + 3x^2 + 4x^3.
+Por otra parte, la función 'rem-p' que calcula el residuo de una división de polinomios, en caso de no ser posible resolver la división devolverá el dividendo como residuo.
 
 ## Ejemplo de Uso
 ```racket
