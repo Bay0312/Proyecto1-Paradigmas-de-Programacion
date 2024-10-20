@@ -323,32 +323,6 @@
 ; ---------------------------------------
 ; --------------CUADRATICA---------------
 ; ---------------------------------------
-; Calcula el discriminante de un polinomio de segundo grado
-(define calcular-discriminante
-  (lambda (a b c)
-    (- (* b b) (* 4 a c))))
-
-; Calcula la raíz de una ecuación cuadrática usando el signo y el discriminante
-(define calcular-raiz-cuadratica
-  (lambda (signo a b discriminante)
-    (/ (signo (* b -1) (sqrt discriminante)) (* 2 a))))
-
-; Factoriza un polinomio de segundo grado
-(define factorizar-segundo-grado
-  (lambda (polinomio)
-    (define a (car (cdr (cdr polinomio))))
-    (define b (car (cdr polinomio)))
-    (define c (car polinomio))
-    (define disc (calcular-discriminante a b c))
-
-    (define obtener-raices
-      (lambda (a b disc)
-        (list (list (* -1 (calcular-raiz-cuadratica + a b disc)) 1)
-              (list (* -1 (calcular-raiz-cuadratica - a b disc)) 1))))
-
-    (if (>= disc 0)
-        (obtener-raices a b disc)
-        "Este polinomio contiene raices imaginarias...")))
 ; Función para resolver ecuaciones cuadráticas
 (define resolver-cuadratica
   (lambda (a b c)
@@ -384,18 +358,15 @@
 ; ---------------------------------------
 ; ----------------CUBICA-----------------
 ; ---------------------------------------
-;; Factorización cúbica actualizada para manejar signos y ceros iniciales
+; Factorización cúbica actualizada para manejar signos y ceros iniciales
 (define factorizar-cubico
   (lambda (p)
     (define p-limpio (limpiar-polinomio (simplificar p)))  ;; Limpiar ceros iniciales
     (define raiz (encontrar-raiz-racional p-limpio))
     (if raiz
-        (let ((coef-reducidos (division-sintetica p-limpio raiz)))
-          (let ((factores-cuadraticos (fact-p coef-reducidos)))
-            (cons (crear-factor-lineal raiz) factores-cuadraticos)))
-        (list p-limpio))))  ;; No se puede factorizar
-
-
+        (cons (crear-factor-lineal raiz) 
+              (fact-p (division-sintetica p-limpio raiz)))  ;; Llamada directa a fact-p
+        (list p-limpio))))  ;; Devuelve el polinomio limpio
 
 ; ---------------------------------------
 ; --------------AUXILIARES---------------
