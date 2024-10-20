@@ -323,8 +323,8 @@
 ; ---------------------------------------
 ; --------------CUADRATICA---------------
 ; ---------------------------------------
-; Función para resolver ecuaciones cuadráticas
-(define resolver-cuadratica
+; Función para resolver ecuaciones cuadráticas de la forma ax2+bx+c=0ax2+bx+c=0 utilizando la fórmula cuadrática.
+(define resolver-ecuacion-cuadratica
   (lambda (a b c)
     ((lambda (discriminante) 
        (if (negative? discriminante)
@@ -335,8 +335,8 @@
             (sqrt (abs discriminante)))))
      (- (* b b) (* 4 a c)))))
 
-;
-(define fact-p-cuadratico
+; Función para factorizar un polinomio cuadrático, si es posible, en términos lineales o devuelve el polinomio original si no se puede factorizar.
+(define fact-polinomio-cuadratico
   (lambda (polinomio)
     ((lambda (a b c)
        (if (zero? a)
@@ -350,7 +350,7 @@
                    (crear-factor-lineal (car raices))
                    (crear-factor-lineal (cadr raices)))
                   (list polinomio))) ; No se puede factorizar con raíces reales
-            (resolver-cuadratica a b c))))
+            (resolver-ecuacion-cuadratica a b c))))
      (if (and (pair? polinomio) (pair? (cdr polinomio)) (pair? (cddr polinomio))) (caddr polinomio) 0)
      (if (and (pair? polinomio) (pair? (cdr polinomio))) (cadr polinomio) 0)
      (if (pair? polinomio) (car polinomio) 0))))
@@ -358,8 +358,8 @@
 ; ---------------------------------------
 ; ----------------CUBICA-----------------
 ; ---------------------------------------
-; Factorización cúbica actualizada para manejar signos y ceros iniciales
-(define factorizar-cubico
+; Función para factorizar un polinomio cúbico utilizando la regla de Ruffini y buscando raíces racionales.
+(define factorizar-polinomio-cubico
   (lambda (p)
     (define p-limpio (limpiar-polinomio (simplificar p)))  ;; Limpiar ceros iniciales
     (define raiz (encontrar-raiz-racional p-limpio))
@@ -371,7 +371,7 @@
 ; ---------------------------------------
 ; --------------AUXILIARES---------------
 ; ---------------------------------------
-; 
+; Función para obtener una lista de posibles raíces de un polinomio basado en su término independiente.
 (define obtener-posibles-raices
   (lambda (c)
     (define calcular-raices
@@ -382,7 +382,7 @@
           [else (calcular-raices (sub1 divisor) res)])))
     (calcular-raices (sub1 (abs c)) (list c))))
 
-; Factoriza un polinomio cuando no tiene término independiente
+; Función para factorizar un polinomio que no tiene término independiente, utilizando un factor común y las raíces encontradas.
 (define factorizar-sin-termino-independiente
   (lambda (polinomio)
     (define factor-comun (obtener-factor-comun (cdr polinomio)))
@@ -395,7 +395,7 @@
     
     (realizar-factorizacion (obtener-raices-ruffini (cdr polinomio)) (list factor-comun))))
 
-; Aplica la regla de Ruffini para encontrar raíces racionales
+; Función para aplicar la regla de Ruffini para encontrar raíces racionales de un polinomio.
 (define obtener-raices-ruffini
   (lambda (polinomio)
     (define posibles-raices (reverse (obtener-posibles-raices (first polinomio))))
@@ -428,7 +428,7 @@
     
     (realizar-ruffini (reverse polinomio) '() posibles-raices +)))
 
-; Factoriza un polinomio a partir de sus raíces
+; Función para factorizar un polinomio a partir de sus raíces encontradas.
 (define factorizar-con-raices
   (lambda (polinomio obtener-raices)
     (define realizar-factorizacion
@@ -438,14 +438,14 @@
             (realizar-factorizacion (cdr raices) (append res (list (list (* (car raices) -1) 1)))))))
     (realizar-factorizacion (obtener-raices polinomio) '())))
 
-; Obtiene el máximo común divisor de los coeficientes de un polinomio
+; Función para calcular el máximo común divisor de los coeficientes de un polinomio.
 (define obtener-mcd
   (lambda (polinomio)
     (if (equal? (length polinomio) 1)
         (car polinomio)
         (gcd (car polinomio) (obtener-mcd (cdr polinomio))))))
 
-; Encuentra el factor común de un polinomio
+; Función para encontrar el factor común en los coeficientes de un polinomio.
 (define obtener-factor-comun
   (lambda (polinomio)
     (define factor-comun
@@ -455,53 +455,82 @@
             (factor-comun comun-div (cdr p) (add1 ct)))))
     (factor-comun (obtener-mcd polinomio) polinomio 0)))
 
-; Función para la división sintética del polinomio
+; Función para realizar la división sintética de un polinomio por un número real, devolviendo el cociente.
 (define division-sintetica
   (lambda (p r)
-    (define (helper p acc)
+    (define (sintetizar p acc)
       (if (null? (cdr p))
           (reverse (cdr acc))  ;; Devolver el cociente sin el residuo
-          (helper (cdr p) (cons (+ (car (cdr p)) (* r (car acc))) acc))))
-    (reverse (helper (reverse p) (list (car (reverse p)))))))
+          (sintetizar (cdr p) (cons (+ (car (cdr p)) (* r (car acc))) acc))))
+    (reverse (sintetizar (reverse p) (list (car (reverse p)))))))
 
-; Función para encontrar divisores de un número
+; Función para generar una lista de divisores de un número entero.
 (define divisores
   (lambda (n)
     (filter (lambda (i) (zero? (remainder n i))) (range 1 (add1 (abs n))))))
 
-; Función para encontrar una raíz racional del polinomio
+; Función para encontrar la primera raíz racional que satisface un polinomio dado, utilizando el teorema de las raíces racionales.
 (define encontrar-raiz-racional
   (lambda (p)
     (define num (abs (first p)))  ;; Término constante
     (define den (abs (last p)))   ;; Coeficiente de mayor grado
-    (define posibles-raices
-      (append
-       (for/list ([n (in-list (divisores num))] [d (in-list (divisores den))])
-         (/ n d))
-       (for/list ([n (in-list (divisores num))] [d (in-list (divisores den))])
-         (- (/ n d))))) ;; Considera las raíces positivas y negativas
-    (for/or ([r posibles-raices])
-      (if (zero? (eval-p p r)) r #f)))) ;; Evalúa el polinomio en cada raíz
 
-; Simplifica los polinomios eliminando ceros a la izquierda
+    ;; Función para generar las divisiones positivas y negativas
+    (define generar-raices
+      (lambda (divisores-num divisores-den)
+        (append
+          (generar-positivos divisores-num divisores-den)
+          (generar-negativos divisores-num divisores-den))))
+
+    ;; Generar raíces positivas
+    (define generar-positivos
+      (lambda (divisores-num divisores-den)
+        (if (null? divisores-num)
+            '()
+            (append
+              (map (lambda (d) (/ (car divisores-num) d)) divisores-den)
+              (generar-positivos (cdr divisores-num) divisores-den)))))
+
+    ;; Generar raíces negativas
+    (define generar-negativos
+      (lambda (divisores-num divisores-den)
+        (if (null? divisores-num)
+            '()
+            (append
+              (map (lambda (d) (- (/ (car divisores-num) d))) divisores-den)
+              (generar-negativos (cdr divisores-num) divisores-den)))))
+
+    ;; Buscar la primera raíz racional que satisfaga el polinomio
+    (define buscar-raiz
+      (lambda (raices)
+        (cond
+          ((null? raices) #f)
+          ((zero? (eval-p p (car raices))) (car raices))
+          (else (buscar-raiz (cdr raices))))))
+
+    ;; Ejecuta la búsqueda
+    (buscar-raiz (generar-raices (divisores num) (divisores den)))))
+
+
+; Función para eliminar ceros a la izquierda en un polinomio, devolviendo una lista más limpia.
 (define limpiar-polinomio
   (lambda (p)
-    (drop-while zero? p)))
+    (filtrar-hasta zero? p)))
 
-; Implementación propia de drop-while
-(define drop-while
+; Función para eliminar los elementos de una lista mientras un predicado dado sea verdadero.
+(define filtrar-hasta
   (lambda (pred lst)
     (cond
       [(null? lst) '()]
-      [(pred (car lst)) (drop-while pred (cdr lst))]
+      [(pred (car lst)) (filtrar-hasta pred (cdr lst))]
       [else lst])))
 
-; Función para crear un factor lineal de la forma (x - r)
+; Función para crear un factor lineal de la forma (x-r)(x-r) dado un valor de raíz r.
 (define crear-factor-lineal
   (lambda (raiz)
     (list (- raiz) 1)))
  
-; Función principal que decide el método de factorización según el polinomio
+; Función para decidir el método de factorización a aplicar a un polinomio según su grado y estructura.
 (define fact-p
   (lambda (polinomio)
     (if (and (= (length polinomio) 4)  ; Verifica que el polinomio tenga 4 coeficientes
@@ -509,9 +538,9 @@
         (factorizar-sin-termino-independiente polinomio)  ; Utiliza CODIGO 1
         (cond
           [(= (grado polinomio) 2)
-           (fact-p-cuadratico polinomio)]  ;; Grado 2
+           (fact-polinomio-cuadratico polinomio)]  ;; Grado 2
           [(= (grado polinomio) 3)
-           (factorizar-cubico polinomio)]  ;; Grado 3
+           (factorizar-polinomio-cubico polinomio)]  ;; Grado 3
           [else 
            (if (equal? (first polinomio) 0)
                (factorizar-sin-termino-independiente polinomio)  ; Usar factorización sin término independiente
