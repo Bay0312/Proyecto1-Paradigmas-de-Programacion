@@ -273,7 +273,6 @@
          p2))))
 
 ; Función principal para el cálculo del residuo
-; SI LA DIVISION NO ES POSIBLE, ENTONCES EL RESIDUO SERÁ EL MISMO DIVIDENDO
 (define rem-p
   (lambda (p1 p2)
     (display-p (simplificar (rem-p-recursivo p1 p2)))))
@@ -321,6 +320,9 @@
 ; --------------------------------------------------------------------------------
 ; ------------------------PARA FACTORIZACION DE POLINOMIOS------------------------
 ; --------------------------------------------------------------------------------
+; ---------------------------------------
+; --------------CUADRATICA---------------
+; ---------------------------------------
 ; Calcula el discriminante de un polinomio de segundo grado
 (define calcular-discriminante
   (lambda (a b c)
@@ -347,7 +349,58 @@
     (if (>= disc 0)
         (obtener-raices a b disc)
         "Este polinomio contiene raices imaginarias...")))
+; Función para resolver ecuaciones cuadráticas
+(define resolver-cuadratica
+  (lambda (a b c)
+    ((lambda (discriminante) 
+       (if (negative? discriminante)
+           #f  ; No hay raíces reales
+           ((lambda (raiz-discriminante)
+              (list (/ (+ (- b) raiz-discriminante) (* 2 a))
+                    (/ (- (- b) raiz-discriminante) (* 2 a))))
+            (sqrt (abs discriminante)))))
+     (- (* b b) (* 4 a c)))))
 
+;
+(define fact-p-cuadratico
+  (lambda (polinomio)
+    ((lambda (a b c)
+       (if (zero? a)
+           (list polinomio)  ; No es un polinomio cuadrático
+           ((lambda (raices)
+              (if raices
+                  ((lambda (factor1 factor2)
+                     (if (= a 1)
+                         (list factor1 factor2)
+                         (list (list a) factor1 factor2)))
+                   (crear-factor-lineal (car raices))
+                   (crear-factor-lineal (cadr raices)))
+                  (list polinomio))) ; No se puede factorizar con raíces reales
+            (resolver-cuadratica a b c))))
+     (if (and (pair? polinomio) (pair? (cdr polinomio)) (pair? (cddr polinomio))) (caddr polinomio) 0)
+     (if (and (pair? polinomio) (pair? (cdr polinomio))) (cadr polinomio) 0)
+     (if (pair? polinomio) (car polinomio) 0))))
+
+; ---------------------------------------
+; ----------------CUBICA-----------------
+; ---------------------------------------
+;; Factorización cúbica actualizada para manejar signos y ceros iniciales
+(define factorizar-cubico
+  (lambda (p)
+    (define p-limpio (limpiar-polinomio (simplificar p)))  ;; Limpiar ceros iniciales
+    (define raiz (encontrar-raiz-racional p-limpio))
+    (if raiz
+        (let ((coef-reducidos (division-sintetica p-limpio raiz)))
+          (let ((factores-cuadraticos (fact-p coef-reducidos)))
+            (cons (crear-factor-lineal raiz) factores-cuadraticos)))
+        (list p-limpio))))  ;; No se puede factorizar
+
+
+
+; ---------------------------------------
+; --------------AUXILIARES---------------
+; ---------------------------------------
+; 
 (define obtener-posibles-raices
   (lambda (c)
     (define calcular-raices
@@ -357,6 +410,19 @@
           [(equal? (modulo c divisor) 0) (calcular-raices (sub1 divisor) (append res (list divisor)))]
           [else (calcular-raices (sub1 divisor) res)])))
     (calcular-raices (sub1 (abs c)) (list c))))
+
+; Factoriza un polinomio cuando no tiene término independiente
+(define factorizar-sin-termino-independiente
+  (lambda (polinomio)
+    (define factor-comun (obtener-factor-comun (cdr polinomio)))
+    
+    (define realizar-factorizacion
+      (lambda (raices res)
+        (if (null? raices)
+            res
+            (realizar-factorizacion (cdr raices) (append res (list (list (* (car raices) -1) 1)))))))
+    
+    (realizar-factorizacion (obtener-raices-ruffini (cdr polinomio)) (list factor-comun))))
 
 ; Aplica la regla de Ruffini para encontrar raíces racionales
 (define obtener-raices-ruffini
@@ -418,32 +484,67 @@
             (factor-comun comun-div (cdr p) (add1 ct)))))
     (factor-comun (obtener-mcd polinomio) polinomio 0)))
 
-; Factoriza un polinomio cuando no tiene término independiente
-(define factorizar-sin-termino-independiente
-  (lambda (polinomio)
-    (define factor-comun (obtener-factor-comun (cdr polinomio)))
-    
-    (define realizar-factorizacion
-      (lambda (raices res)
-        (if (null? raices)
-            res
-            (realizar-factorizacion (cdr raices) (append res (list (list (* (car raices) -1) 1)))))))
-    
-    (realizar-factorizacion (obtener-raices-ruffini (cdr polinomio)) (list factor-comun))))
+; Función para la división sintética del polinomio
+(define division-sintetica
+  (lambda (p r)
+    (define (helper p acc)
+      (if (null? (cdr p))
+          (reverse (cdr acc))  ;; Devolver el cociente sin el residuo
+          (helper (cdr p) (cons (+ (car (cdr p)) (* r (car acc))) acc))))
+    (reverse (helper (reverse p) (list (car (reverse p)))))))
 
+; Función para encontrar divisores de un número
+(define divisores
+  (lambda (n)
+    (filter (lambda (i) (zero? (remainder n i))) (range 1 (add1 (abs n))))))
+
+; Función para encontrar una raíz racional del polinomio
+(define encontrar-raiz-racional
+  (lambda (p)
+    (define num (abs (first p)))  ;; Término constante
+    (define den (abs (last p)))   ;; Coeficiente de mayor grado
+    (define posibles-raices
+      (append
+       (for/list ([n (in-list (divisores num))] [d (in-list (divisores den))])
+         (/ n d))
+       (for/list ([n (in-list (divisores num))] [d (in-list (divisores den))])
+         (- (/ n d))))) ;; Considera las raíces positivas y negativas
+    (for/or ([r posibles-raices])
+      (if (zero? (eval-p p r)) r #f)))) ;; Evalúa el polinomio en cada raíz
+
+; Simplifica los polinomios eliminando ceros a la izquierda
+(define limpiar-polinomio
+  (lambda (p)
+    (drop-while zero? p)))
+
+; Implementación propia de drop-while
+(define drop-while
+  (lambda (pred lst)
+    (cond
+      [(null? lst) '()]
+      [(pred (car lst)) (drop-while pred (cdr lst))]
+      [else lst])))
+
+; Función para crear un factor lineal de la forma (x - r)
+(define crear-factor-lineal
+  (lambda (raiz)
+    (list (- raiz) 1)))
+ 
 ; Función principal que decide el método de factorización según el polinomio
 (define fact-p
   (lambda (polinomio)
-    (cond
-      [(<= (length polinomio) 2) polinomio] ; No hace nada si la lista tiene 0, 1 o 2 elementos
-      [(and (= (length polinomio) 3) (not (equal? (third polinomio) 0)))
-       (factorizar-segundo-grado polinomio)] ; Factorización de segundo grado
-      [else 
-       (if (equal? (first polinomio) 0)
-           (factorizar-sin-termino-independiente polinomio) ; Factorización sin término independiente
-           (factorizar-con-raices polinomio obtener-raices-ruffini))]))) ; Factorización con Ruffini
-
-
+    (if (and (= (length polinomio) 4)  ; Verifica que el polinomio tenga 4 coeficientes
+             (zero? (first polinomio)))  ; El primer coeficiente debe ser 0
+        (factorizar-sin-termino-independiente polinomio)  ; Utiliza CODIGO 1
+        (cond
+          [(= (grado polinomio) 2)
+           (fact-p-cuadratico polinomio)]  ;; Grado 2
+          [(= (grado polinomio) 3)
+           (factorizar-cubico polinomio)]  ;; Grado 3
+          [else 
+           (if (equal? (first polinomio) 0)
+               (factorizar-sin-termino-independiente polinomio)  ; Usar factorización sin término independiente
+               (factorizar-con-raices polinomio obtener-raices-ruffini))]))))  ; Factorización con Ruffini
 ; --------------------------------------------------------------------------------
 ; ---------------------FINAL PARA FACTORIZACION DE POLINOMIOS---------------------
 ; --------------------------------------------------------------------------------
@@ -515,10 +616,10 @@
 (newline)
 ; (fact-p p1)
 (display "(fact-p p1)") (newline) (newline)
-(fact-p '(1 -1)) ; Grado 1
-(fact-p '(25 -10 1)) ; Grado 2
-(fact-p '(-8 14 -7 1)) ; Grado 3
-(fact-p '(24 -50 35 -10 1)) ; Grado 4
-(fact-p '(-120 274 -225 85 -15 1)) ; Grado 5
-(fact-p  '(720 -1764 1624 -735 175 -21 1)) ;Grado 6 
-(fact-p '(3628800 -10628640 12753576 -8409500 3416930 -902055 157773 -18150 1320 -55 1)) ; Grado 10
+(fact-p '(0 3 -1 -3 1))
+(fact-p '(4 0 -5 0 1))
+(fact-p '(6 -1 -7 1 1))
+(fact-p '(0 -10 -13 -2 1))
+(fact-p '(0 2 0 -2))
+(fact-p '(1 0 -1))
+(fact-p '(1 -6 11 -6))
