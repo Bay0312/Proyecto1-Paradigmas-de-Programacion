@@ -247,7 +247,9 @@
 ; Función principal para la división de polinomios y su despliegue
 (define qt-p
   (lambda (p1 p2)
-    (display-p (simplificar (qt-p-recursivo p1 p2 '(0))))))
+    (if (= (coef-lider p2) 0)
+        (displayln "División por cero - No puedes dividir un polinomio entre 0")
+        (display-p (simplificar (qt-p-recursivo p1 p2 '(0)))))))
 
 ; --------------------------------------------------------------------------------
 ; ---------------------FINAL PARA DIVISION POLINOMIOS PARTE I---------------------
@@ -275,7 +277,9 @@
 ; Función principal para el cálculo del residuo
 (define rem-p
   (lambda (p1 p2)
-    (display-p (simplificar (rem-p-recursivo p1 p2)))))
+    (if (= (coef-lider p2) 0)
+        (displayln "División por cero - No puedes dividir un polinomio entre 0")
+        (display-p (simplificar (rem-p-recursivo p1 p2))))))
 
 ; --------------------------------------------------------------------------------
 ; --------------------FINAL PARA DIVISION POLINOMIOS PARTE II---------------------
@@ -283,14 +287,24 @@
 
 
 ; --------------------------------------------------------------------------------
-; -----------------------PARA DIVISION POLINOMIOS PARTE III------------------------
+; -----------------------PARA DIVISION POLINOMIOS PARTE III-----------------------
 ; --------------------------------------------------------------------------------
+; Los polinomios se simplifican para mostrarse en /-p (se eliminan 0).
+; Esta funcion asegura que se mantenga el 0 en la lista si esto fue devuelto.
+(define asegurar-cero
+  (lambda (polinomio)
+    (if (null? polinomio)
+        '(0)
+        polinomio)))
+
 ; Función /-p para devolver una lista con el cociente y el residuo de la división.
 ; El primer elemento de la lista correspone al cociente, el segundo al residuo.
 (define /-p
   (lambda (p1 p2)
-    (list (simplificar (qt-p-recursivo p1 p2 '(0)))  ; El cociente
-          (simplificar (rem-p-recursivo p1 p2)))))   ; El residuo
+    (if (= (coef-lider p2) 0)
+        (displayln "División por cero - No puedes dividir un polinomio entre 0")
+        (list (asegurar-cero (simplificar (qt-p-recursivo p1 p2 '(0))))  ; El cociente
+              (asegurar-cero (simplificar (rem-p-recursivo p1 p2)))))))   ; El residuo
 
 ; --------------------------------------------------------------------------------
 ; -------------------FINAL PARA DIVISION POLINOMIOS PARTE III---------------------
@@ -587,7 +601,9 @@
 
 (newline)
 ; (rem-p p1 p2)
-(display "(rem-p p1 p2)") (newline) (newline)
+(display "(rem-p p1 p2)")(newline)
+(display "Nota: rem-p devolverá el dividendo si la operación no es realizable.")
+(newline)(newline)
 (rem-p '(1 2) '(1)) 
 (rem-p '(2 4 2) '(1 1)) 
 (rem-p '(3 6 2) '(1 1 1)) 
